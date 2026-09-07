@@ -134,7 +134,8 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 - Rynek: pytanie + resolution_height + pula nagród (outcome_pools)
 - Tylko twórca rynku może go rozwiązać (actual_class 0-15)
 - Nagroda = (stake × total_pool) / winning_pool — wypłacana po rozwiązaniu
-- Testy: 28 passed (w tym 15 nowych testów marketplace)
+- Testy: **34 passed** (28 check_tx + 6 deliver_tx — pełny cykl end-to-end: create_market → stake → resolve → claim)
+- Testy deliver_tx: MockPlugin (in-memory state), weryfikacja sald, błędów (brak rynku, nie-kreator, zły outcome, podwójny claim, brak funduszy)
 
 ### 9. ⏳ Cross-chain Oracle — **DO ZROBIENIA**
 - G2 jako oracle dla innych chainów (predykcje rynku, anomalie)
