@@ -62,4 +62,7 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 
 ## License
 
-MIT — (c) 2026 Sawelew Tech / Ortoplex Research Division
+**Apache-2.0** — (c) 2026 Sawelew Tech / Ortoplex Research Division
+
+- Kod AI (cross7 / G2 / ZeroPerceptron) chroniony zgłoszeniem patentowym QMRS — patrz `NOTICE`.
+- Wykorzystanie komercyjne / kryptograficzne (faktoryzacja, RSA, post-quantum) wymaga zgody — patrz `PATENT_QMRS.md`.
