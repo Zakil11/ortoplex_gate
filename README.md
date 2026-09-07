@@ -128,8 +128,13 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 - Off-chain: retraining na GPU z nowymi danymi, nowe wagi przez governance
 - **To czyni QARD pierwszym chainem z prawdziwym "AI, które uczy się z użycia"**
 
-### 8. ⏳ Prediction Marketplace / Staking — **DO ZROBIENIA**
-- Staking QARD na predykcje (kto trafnie przewidzi, dostaje nagrodę)
+### 8. ✅ Prediction Marketplace / Staking — **GOTOWE**
+- Nowe transakcje: `MessageStake` (0x06), `MessageCreateMarket` (0x05), `MessageResolveMarket`, `MessageClaimReward`
+- Staking QARD na predykcje — kto trafnie przewidzi, dostaje nagrodę proporcjonalną do stawki
+- Rynek: pytanie + resolution_height + pula nagród (outcome_pools)
+- Tylko twórca rynku może go rozwiązać (actual_class 0-15)
+- Nagroda = (stake × total_pool) / winning_pool — wypłacana po rozwiązaniu
+- Testy: 28 passed (w tym 15 nowych testów marketplace)
 
 ### 9. ⏳ Cross-chain Oracle — **DO ZROBIENIA**
 - G2 jako oracle dla innych chainów (predykcje rynku, anomalie)
@@ -150,8 +155,8 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 |---|---------|--------|--------|
 | 1 | Explainability + Temperature | ✅ GOTOWE | `60a4278` |
 | 2 | Feedback Loop | ✅ GOTOWE | `f9b2218` |
-| 3 | Nowe modalności 42D | 🔄 W TRAKCIE | — |
-| 4 | Prediction Marketplace | ⏳ DO ZROBIENIA | — |
+| 3 | Nowe modalności 42D | ✅ GOTOWE | `83f9345` |
+| 4 | Prediction Marketplace | ✅ GOTOWE | — |
 | 5 | Ensemble G2 + Spiral + Resonance | ⏳ DO ZROBIENIA | — |
 | 6 | Rozszerzenie klas 16→32 | ⏳ DO ZROBIENIA | — |
 | 7 | Dynamic fee | ⏳ DO ZROBIENIA | — |
