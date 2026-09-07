@@ -134,7 +134,7 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 - Rynek: pytanie + resolution_height + pula nagród (outcome_pools)
 - Tylko twórca rynku może go rozwiązać (actual_class 0-15)
 - Nagroda = (stake × total_pool) / winning_pool — wypłacana po rozwiązaniu
-- Testy: **44 passed** (34 check_tx + 10 deliver_tx — pełny cykl end-to-end: create_market → stake → resolve → claim + model registry)
+- Testy: **49 passed** (34 check_tx + 10 deliver_tx + 5 dashboard — pełny cykl end-to-end: create_market → stake → resolve → claim + model registry + dashboard)
 - Testy deliver_tx: MockPlugin (in-memory state), weryfikacja sald, błędów (brak rynku, nie-kreator, zły outcome, podwójny claim, brak funduszy)
 
 ### 9. ⏳ Cross-chain Oracle — **DO ZROBIENIA**
@@ -142,15 +142,20 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 
 ## 📊 FAZA 4 — Infrastruktura
 
-### 10. ⏳ Dashboard on-chain — **DO ZROBIENIA**
-- Agregacje w state: liczba predykcji, accuracy, top klasy, revenue z fee
+### 10. ✅ Dashboard on-chain — **GOTOWE** (commit `1bedab0`)
+- Nowy namespace 0x0b (`DASHBOARD_PREFIX`) — globalny rekord metryk G2 w state
+- Agregacje: `total_predictions`, `class_counts`, `revenue`, `total_feedback`, `correct_feedback`, `accuracy`, `total_staked`, `total_markets`, `resolved_markets`, `total_rewards`, `total_models`, `active_model`
+- Każda transakcja aktualizuje dashboard: predict, feedback, stake, create_market, resolve_market, claim_reward, register_model
+- `accuracy` recalculated = correct_feedback / total_feedback
+- Dane gotowe do wizualizacji i dynamic fee
+- Testy: **49 passed** (44 + 5 nowych dashboard)
 
 ### 11. ✅ Model versioning — **GOTOWE** (commit `4e824e5`)
 - Nowy typ transakcji `MessageRegisterModel` (0x09 registry + 0x0a counter)
 - Rejestr: wersja, hash wag, accuracy, in_dim (28/42), n_classes, opis
 - Active model pointer (0x09/active/) — wskazuje najnowszą wersję
 - Governance: aktualizacja wag bez hard-forku (rejestr on-chain)
-- Testy: **44 passed** (34 + 10 nowych: 7 check + 3 deliver)
+- Testy: **49 passed** (34 + 10 + 5 dashboard)
 
 ---
 
@@ -165,7 +170,7 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 | 5 | Ensemble G2 + Spiral + Resonance | ⏳ DO ZROBIENIA | — |
 | 6 | Rozszerzenie klas 16→32 | ⏳ DO ZROBIENIA | — |
 | 7 | Dynamic fee | ⏳ DO ZROBIENIA | — |
-| 8 | Dashboard on-chain | ⏳ DO ZROBIENIA | — |
+| 8 | Dashboard on-chain | ✅ GOTOWE | `1bedab0` |
 | 9 | Model versioning | ✅ GOTOWE | `4e824e5` |
 | 10 | Cross-chain Oracle | ⏳ DO ZROBIENIA | — |
 
