@@ -134,7 +134,7 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 - Rynek: pytanie + resolution_height + pula nagród (outcome_pools)
 - Tylko twórca rynku może go rozwiązać (actual_class 0-15)
 - Nagroda = (stake × total_pool) / winning_pool — wypłacana po rozwiązaniu
-- Testy: **34 passed** (28 check_tx + 6 deliver_tx — pełny cykl end-to-end: create_market → stake → resolve → claim)
+- Testy: **44 passed** (34 check_tx + 10 deliver_tx — pełny cykl end-to-end: create_market → stake → resolve → claim + model registry)
 - Testy deliver_tx: MockPlugin (in-memory state), weryfikacja sald, błędów (brak rynku, nie-kreator, zły outcome, podwójny claim, brak funduszy)
 
 ### 9. ⏳ Cross-chain Oracle — **DO ZROBIENIA**
@@ -145,8 +145,12 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 ### 10. ⏳ Dashboard on-chain — **DO ZROBIENIA**
 - Agregacje w state: liczba predykcji, accuracy, top klasy, revenue z fee
 
-### 11. ⏳ Model versioning — **DO ZROBIENIA**
-- `b"\x05"` model registry: wersja, hash wag, data, accuracy
+### 11. ✅ Model versioning — **GOTOWE** (commit `4e824e5`)
+- Nowy typ transakcji `MessageRegisterModel` (0x09 registry + 0x0a counter)
+- Rejestr: wersja, hash wag, accuracy, in_dim (28/42), n_classes, opis
+- Active model pointer (0x09/active/) — wskazuje najnowszą wersję
+- Governance: aktualizacja wag bez hard-forku (rejestr on-chain)
+- Testy: **44 passed** (34 + 10 nowych: 7 check + 3 deliver)
 
 ---
 
@@ -157,12 +161,12 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 | 1 | Explainability + Temperature | ✅ GOTOWE | `60a4278` |
 | 2 | Feedback Loop | ✅ GOTOWE | `f9b2218` |
 | 3 | Nowe modalności 42D | ✅ GOTOWE | `83f9345` |
-| 4 | Prediction Marketplace | ✅ GOTOWE | — |
+| 4 | Prediction Marketplace | ✅ GOTOWE | `cdfa718` |
 | 5 | Ensemble G2 + Spiral + Resonance | ⏳ DO ZROBIENIA | — |
 | 6 | Rozszerzenie klas 16→32 | ⏳ DO ZROBIENIA | — |
 | 7 | Dynamic fee | ⏳ DO ZROBIENIA | — |
 | 8 | Dashboard on-chain | ⏳ DO ZROBIENIA | — |
-| 9 | Model versioning | ⏳ DO ZROBIENIA | — |
+| 9 | Model versioning | ✅ GOTOWE | `4e824e5` |
 | 10 | Cross-chain Oracle | ⏳ DO ZROBIENIA | — |
 
 ## 🔄 Pełna pętla uczenia (Feedback Loop)
@@ -172,7 +176,7 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 2. Czas mija — znany jest prawdziwy wynik
 3. Użytkownik wysyła MessageFeedback (predict_seq, correct, actual_class) → zapis 0x04
 4. Off-chain: eksport feedback logów → retraining na GPU → nowe wagi
-5. Governance: nowe wagi przez aktualizację modelu (0x05 w przyszłości)
+5. Governance: nowe wagi przez aktualizację modelu (MessageRegisterModel 0x09)
 ```
 
 ## License
