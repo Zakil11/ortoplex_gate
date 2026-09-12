@@ -117,12 +117,17 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 - **Encoder sentymentu** (emoji, znaki interpunkcyjne, CAPS ratio → 7D)
 - Pipeline: `colab_perceptron_multimodal.py` (trening GPU) → `export_genlayer_weights.py` (eksport wag) → aktualizacja `ai_model.py` + `contract.py`
 
-### 5. ⏳ Ensemble G2 + Spiral + Resonance — **DO ZROBIENIA**
-- 3 modele: obecny G2, `g2_spiral_simulator.py`, `g2_med_resonance.py`
-- Voting (majority) lub weighted average
+### 5. ✅ Ensemble G2 + Spiral + Resonance — **GOTOWE** (commit `e38ad93`)
+- 3 modele głosują (weighted vote): G2 42D (główny klasyfikator), SpiralModel7 (geometria golden-angle E1), ResonanceModel7 (rotacje Blocha + cross7 entangler)
+- `contract/ensemble.py` — czysty Python, konwersja z `g2_spiral_simulator.py` + `g2_med_resonance.py`
+- Refine: boost klas RESONANCE_*/VOLATILITY/ANOMALY/FRACTAL_* proporcjonalny do sygnałów geometrii
+- 47 nowych testów (110 total): determinizm, normalizacja, antykomutatywność cross7
 
-### 6. ⏳ Rozszerzenie klas: 16 → 32 — **DO ZROBIENIA**
-- Dodanie klas akcji: `BUY_SIGNAL`, `SELL_SIGNAL`, `HOLD`, `WHALE_ALERT`, `PUMP_DUMP`, `SCAM`, `LEGIT`
+### 6. ✅ Rozszerzenie klas: 16 → 32 — **GOTOWE** (commit `e38ad93`)
+- Action head: 16 klas akcji (16-31) — deterministyczna mapa 12 reguł
+- `BUY_SIGNAL`, `SELL_SIGNAL`, `HOLD`, `WHALE_ALERT`, `PUMP_DETECTED`, `DUMP_DETECTED`, `SCAM_SUSPECT`, `LEGIT`, `HIGH/LOW_VOLATILITY`, `LIQUIDITY_DRAIN/INFLOW`, `TREND_REVERSAL/CONTINUATION`, `DO_NOT_TRADE`, `AWAIT_FEEDBACK`
+- Wejścia: base class + confidence + gate anomaly + entropia + liczby (pump/dump: skok >10x vs mediana)
+- Kolejność reguł: bezpieczeństwo (gate/conf) → scam → pump/dump → buy/sell → whale → legit → entropia
 
 ## 🔄 FAZA 3 — On-chain learning
 
@@ -141,8 +146,10 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 - Testy: **63 passed** (34 check_tx + 10 deliver_tx + 5 dashboard + 6 dynamic fee + 8 config — pełny cykl end-to-end: create_market → stake → resolve → claim + model registry + dashboard)
 - Testy deliver_tx: MockPlugin (in-memory state), weryfikacja sald, błędów (brak rynku, nie-kreator, zły outcome, podwójny claim, brak funduszy)
 
-### 9. ⏳ Cross-chain Oracle — **DO ZROBIENIA**
-- G2 jako oracle dla innych chainów (predykcje rynku, anomalie)
+### 9. ✅ Cross-chain Oracle — **GOTOWE** (commit `e38ad93`)
+- `oracle_signature`: sha256(features42 | y16 | action | conf | ts | chain_id | height) — weryfikowalny na innych chainach bez dostępu do wag
+- `GET /v1/oracle` — pełny payload predykcji + sygnatura + metadane (chain_id, algorithm, reproducible: true)
+- Zastosowania: predykcje rynku, anomalie, weryfikacja AI cross-chain (QARD jako oracle AI dla całego ekosystemu)
 
 ## 📊 FAZA 4 — Infrastruktura
 
@@ -171,12 +178,12 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 | 2 | Feedback Loop | ✅ GOTOWE | `f9b2218` |
 | 3 | Nowe modalności 42D | ✅ GOTOWE | `83f9345` |
 | 4 | Prediction Marketplace | ✅ GOTOWE | `cdfa718` |
-| 5 | Ensemble G2 + Spiral + Resonance | ⏳ DO ZROBIENIA | — |
-| 6 | Rozszerzenie klas 16→32 | ⏳ DO ZROBIENIA | — |
+| 5 | Ensemble G2 + Spiral + Resonance | ✅ GOTOWE | `e38ad93` |
+| 6 | Rozszerzenie klas 16→32 | ✅ GOTOWE | `e38ad93` |
 | 7 | Dynamic fee | ✅ GOTOWE | w `contract.py` (TestDynamicFee) |
 | 8 | Dashboard on-chain | ✅ GOTOWE | `1bedab0` |
 | 9 | Model versioning | ✅ GOTOWE | `4e824e5` |
-| 10 | Cross-chain Oracle | ⏳ DO ZROBIENIA | — |
+| 10 | Cross-chain Oracle | ✅ GOTOWE | `e38ad93` |
 
 ## 🌐 RPC Endpoints (plugin Canopy — commit `2517acf`)
 
@@ -184,7 +191,8 @@ Plugin Python udostępnia inferencję i metryki przez HTTP (port RPC node'a):
 
 | Endpoint | Opis |
 |---|---|
-| `GET /v1/predict?text=...&numbers=[...]` | Inferencja G2 on-chain → `{"y", "class", "probs", "top3", "feature_importance"}` |
+| `GET /v1/predict?text=...&numbers=[...]` | Inferencja G2 on-chain → `{"y", "class", "probs", "top3", "feature_importance", "action", "ensemble"}` |
+| `GET /v1/oracle` | Cross-chain oracle: predykcja + `oracle_signature` (sha256) + metadane weryfikacyjne |
 | `GET /v1/dashboard` | Agregowane metryki (predictions, accuracy, revenue, staking) |
 | `GET /v1/models` | Wersje modeli + aktywny wskaźnik (registry 0x09) |
 | `GET /v1/feedback?address=...&seq=...` | Eksport sygnałów uczenia (feedback log 0x04) |

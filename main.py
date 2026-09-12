@@ -279,6 +279,24 @@ def softmax(x, temperature: float = 1.0):
 # ============================================================
 # 6. AI CONTRACT — entrypoint dla Canopy L1
 # ============================================================
+try:
+    from ensemble import (
+        ALL_CLASSES,
+        action_class,
+        action_name,
+        get_ensemble,
+        oracle_signature,
+    )
+except ImportError:  # pakiet vs skrypt
+    from .ensemble import (
+        ALL_CLASSES,
+        action_class,
+        action_name,
+        get_ensemble,
+        oracle_signature,
+    )
+
+
 class AiContract:
     def __init__(self, weights_path: str = WEIGHTS_FILE):
         self.gate = OrthoplexGate()
@@ -287,6 +305,7 @@ class AiContract:
         self.meta = data.get("meta", {})
         self.w = data["weights"]
         self.recent = deque(maxlen=30)
+        self.ensemble = get_ensemble()
 
     def _weights_count(self):
         total = 0
@@ -335,27 +354,59 @@ class AiContract:
         # --- KLASYFIKATOR (extended42) ---
         x42 = encode_event(text, nums, ts, self.recent)
         logits = self.forward(x42)
-        y = logits.index(max(logits))
+        y_base = logits.index(max(logits))
         probs = softmax(logits, temperature=1.5)
 
-        # top-3 klasy
-        ranked = sorted(zip(_CLASS_NAMES, probs), key=lambda kv: kv[1],
+        # --- ENSEMBLE: G2 + Spiral + Resonance (weighted vote refine) ---
+        refined = self.ensemble.refine(probs, x42, timestamp=float(ts))
+        probs_ref = refined["probs"]
+        y = probs_ref.index(max(probs_ref))
+
+        # --- ACTION HEAD: klasa akcji 16-31 (deterministyczna) ---
+        entropy7 = -sum(
+            (p + 1e-12) * math.log(p + 1e-12) for p in probs[:7]
+        ) if len(probs) >= 7 else 1.0
+        a_idx = action_class(y_base, probs[y_base], is_anom, entropy7,
+                             numbers=nums)
+
+        # --- CROSS-CHAIN ORACLE: sygnatura sha256 predykcji ---
+        sig = oracle_signature(x42, y, a_idx, probs_ref[y], float(ts),
+                               1264119, 0)
+
+        # top-3 klasy (po ensemble refine)
+        ranked = sorted(zip(ALL_CLASSES, probs_ref), key=lambda kv: kv[1],
                         reverse=True)
         top3 = [{"class": name, "prob": round(float(p), 6)}
                 for name, p in ranked[:3]]
 
         # feature importance — numeryczny gradient logitu klasy zwycięskiej
-        importance = self._feature_importance(x42, logits, y)
+        importance = self._feature_importance(x42, logits, y_base)
 
         return {
             "gate": "ANOMALY" if is_anom else "NORMAL",
             "anomaly_score": round(score, 4),
             "y": int(y),
-            "decision": _CLASS_NAMES[y] if 0 <= y < len(_CLASS_NAMES) else "CLASS_{}".format(y),
+            "y_base": int(y_base),
+            "decision": ALL_CLASSES[y] if 0 <= y < len(ALL_CLASSES) else "CLASS_{}".format(y),
             "top3": top3,
             "feature_importance": [round(float(v), 6) for v in importance],
             "temperature": 1.5,
-            "confidence": round(probs[y], 4),
+            "confidence": round(probs_ref[y], 4),
+            "ensemble": {
+                "spiral": refined["spiral"],
+                "resonance": refined["resonance"],
+                "changed": bool(y != y_base),
+            },
+            "action": {
+                "y": int(a_idx),
+                "name": action_name(a_idx),
+            },
+            "oracle": {
+                "signature": sig,
+                "chain_id": 1264119,
+                "n_classes": 32,
+                "reproducible": True,
+            },
             "storage_weights": self._weights_count(),
             "meta": self.meta,
         }
@@ -406,4 +457,7 @@ if __name__ == "__main__":
                       "decision": res["decision"],
                       "top3": res["top3"],
                       "confidence": res["confidence"],
+                      "ensemble": res["ensemble"],
+                      "action": res["action"],
+                      "oracle_sig": res["oracle"]["signature"][:16] + "...",
                       "storage_weights": res["storage_weights"]}, indent=2))
