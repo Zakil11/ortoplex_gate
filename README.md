@@ -9,10 +9,13 @@ CANOPY APPCHAIN L1 (Python)
 ├─▶ ORTHOPLEX GATE (0 KB wag, unsupervised)
 │     L1, L2, sphere_radius, fuel, SVD → NORMAL/ANOMALY
 └─▶ G₂+ZERO KLASYFIKATOR (wagi: data/perceptron_genlayer_weights.json)
-      extended 28D fusion → 256→512→256→16 klas → decyzja
+      extended 42D fusion (raw7 + fused14 + inter7 + meta7 + cross7_self)
+        → 256→512→256→16 klas → decyzja
 ```
 
-Model wytrenowany: **13 400 epok na RTX 4060 Laptop GPU, acc=1.0** (28D extended, hidden=256).
+Model wytrenowany: **extended42 na danych KuCoin Futures (RTX 4060 Laptop GPU)** —
+`meta: {mode: extended42, in_dim: 42, hidden: 256, acc: 0.3232, source: kucoin_futures}`.
+(v1: 28D syntetyczne, acc=1.0 — historia treningu w `colab_perceptron_multimodal.py`.)
 
 ## Użycie
 
@@ -94,8 +97,8 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 ## 🚀 FAZA 1 — Quick wins
 
 ### 1. ✅ Explainability / Feature Importance — **GOTOWE** (commit `60a4278`)
-- `top3_classes` + `feature_importance` (28 wymiarów) w odpowiedzi modelu
-- Numeryczny gradient logitu klasy zwycięskiej względem każdego wymiaru
+- `top3_classes` + `feature_importance` (42 wymiarów) w odpowiedzi modelu
+- Numeryczny gradient logitu klasy zwycięskiej względem każdego z 42 wymiarów
 - Znormalizowany do [-1, 1]
 
 ### 2. ✅ Temperature Scaling — **GOTOWE** (commit `60a4278`)
@@ -174,6 +177,22 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 | 8 | Dashboard on-chain | ✅ GOTOWE | `1bedab0` |
 | 9 | Model versioning | ✅ GOTOWE | `4e824e5` |
 | 10 | Cross-chain Oracle | ⏳ DO ZROBIENIA | — |
+
+## 🌐 RPC Endpoints (plugin Canopy — commit `2517acf`)
+
+Plugin Python udostępnia inferencję i metryki przez HTTP (port RPC node'a):
+
+| Endpoint | Opis |
+|---|---|
+| `GET /v1/predict?text=...&numbers=[...]` | Inferencja G2 on-chain → `{"y", "class", "probs", "top3", "feature_importance"}` |
+| `GET /v1/dashboard` | Agregowane metryki (predictions, accuracy, revenue, staking) |
+| `GET /v1/models` | Wersje modeli + aktywny wskaźnik (registry 0x09) |
+| `GET /v1/feedback?address=...&seq=...` | Eksport sygnałów uczenia (feedback log 0x04) |
+| `GET /v1/health` | Health check pluginu |
+
+Fixy stabilności RPC: obsługa pustych wartości state na świeżym chainie
+(`a3b339e` dashboard, `5c73668` feedback, `527e742` models).
+Testy: **63 passed** (Python 3.11 compat — `c9e6aa2`).
 
 ## 🔄 Pełna pętla uczenia (Feedback Loop)
 

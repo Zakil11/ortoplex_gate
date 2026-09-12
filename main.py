@@ -26,7 +26,8 @@ WARSTWY:
   A) ORTHOPLEX GATE (unsupervised, 0 KB wag, czysta geometria):
        L1, L2, sphere_radius, orthoplex_fuel, SVD-projection → NORMAL/ANOMALY
   B) PERCEPTRON G2+Zero (supervised, wagi z perceptron_genlayer_weights.json):
-       extended 28D fusion → ZeroBlock → 16 klas → decision
+       extended 42D fusion (raw7 + fused14 + inter7 + meta7 + cross7_self)
+         → ZeroBlock → 16 klas → decyzja
 
 UŻYCIE (Canopy):
   from canopy_l1_ai import AiContract
@@ -167,7 +168,7 @@ def time_encode(ts: float) -> list:
 
 
 # ============================================================
-# 4. FUZJA EXTENDED — 28D (ta sama co w treningu)
+# 4. FUZJA EXTENDED42 — 42D (identyczna z ai_model.py / treningiem kucoin_futures)
 # ============================================================
 def _raw_avg(modalities, include):
     acc = [0.0] * 7
@@ -225,7 +226,25 @@ def encode_event(text: str, numbers: list, timestamp: float = 0.0,
 
     raw7 = _raw_avg(modalities, present)
     inter7 = [raw7[i] * fused14[i] for i in range(7)]
-    return raw7 + fused14 + inter7
+
+    # meta7 — średnia kwadratów modalności (energia)
+    meta7 = [0.0] * 7
+    n_present = 0
+    for name in present:
+        v = modalities.get(name)
+        if v is not None and len(v) == 7:
+            meta7 = [meta7[i] + v[i] * v[i] for i in range(7)]
+            n_present += 1
+    if n_present > 0:
+        meta7 = [x / n_present for x in meta7]
+    meta7 = [max(-1.0, min(1.0, x)) for x in meta7]
+
+    # cross7_self — druga runda oktonionowa raw7 × fused7
+    cross7_self = cross7(raw7, fused14[:7])
+    scale = max(abs(x) for x in cross7_self) + 1e-8
+    cross7_self = [x / scale for x in cross7_self]
+
+    return raw7 + fused14 + inter7 + meta7 + cross7_self
 
 
 # ============================================================
@@ -247,9 +266,12 @@ def bn_eval(x, w, b, rm, rv, eps=1e-5):
             for i, xi in enumerate(x)]
 
 
-def softmax(x):
-    mx = max(x)
-    ex = [math.exp(v - mx) for v in x]
+def softmax(x, temperature: float = 1.0):
+    if temperature <= 0:
+        temperature = 1.0
+    scaled = [v / temperature for v in x]
+    mx = max(scaled)
+    ex = [math.exp(v - mx) for v in scaled]
     s = sum(ex)
     return [v / s for v in ex]
 
@@ -277,9 +299,9 @@ class AiContract:
                 total += len(v)
         return total
 
-    def forward(self, x28):
+    def forward(self, x42):
         w = self.w
-        s = matmul_vec(w["backbone.fc00.weight"], x28, w["backbone.fc00.bias"])
+        s = matmul_vec(w["backbone.fc00.weight"], x42, w["backbone.fc00.bias"])
         h = zero_act(s)
         s = matmul_vec(w["backbone.block1.fc.weight"], h,
                        w["backbone.block1.fc.bias"])
@@ -310,21 +332,67 @@ class AiContract:
         self.gate.update(raw7)
         is_anom, score = self.gate.is_anomaly(raw7)
 
-        # --- KLASYFIKATOR ---
-        x28 = encode_event(text, nums, ts, self.recent)
-        logits = self.forward(x28)
+        # --- KLASYFIKATOR (extended42) ---
+        x42 = encode_event(text, nums, ts, self.recent)
+        logits = self.forward(x42)
         y = logits.index(max(logits))
-        probs = softmax(logits)
+        probs = softmax(logits, temperature=1.5)
+
+        # top-3 klasy
+        ranked = sorted(zip(_CLASS_NAMES, probs), key=lambda kv: kv[1],
+                        reverse=True)
+        top3 = [{"class": name, "prob": round(float(p), 6)}
+                for name, p in ranked[:3]]
+
+        # feature importance — numeryczny gradient logitu klasy zwycięskiej
+        importance = self._feature_importance(x42, logits, y)
 
         return {
             "gate": "ANOMALY" if is_anom else "NORMAL",
             "anomaly_score": round(score, 4),
             "y": int(y),
-            "decision": "CLASS_" + str(int(y)),
+            "decision": _CLASS_NAMES[y] if 0 <= y < len(_CLASS_NAMES) else "CLASS_{}".format(y),
+            "top3": top3,
+            "feature_importance": [round(float(v), 6) for v in importance],
+            "temperature": 1.5,
             "confidence": round(probs[y], 4),
             "storage_weights": self._weights_count(),
             "meta": self.meta,
         }
+
+    def _feature_importance(self, x42, logits, y, eps: float = 1e-3):
+        """Numeryczny gradient logitu klasy y względem każdego z 42 wymiarów."""
+        base = logits[y]
+        imp = []
+        for i in range(len(x42)):
+            x_plus = list(x42)
+            x_plus[i] += eps
+            logits_plus = self.forward(x_plus)
+            imp.append((logits_plus[y] - base) / eps)
+        mx = max(abs(v) for v in imp) if imp else 1.0
+        if mx > 1e-12:
+            imp = [v / mx for v in imp]
+        return imp
+
+
+_CLASS_NAMES = [
+    "BENIGN",       # 0
+    "LOW_RISK",     # 1
+    "INFO",         # 2
+    "RAISE_ALERT",  # 3
+    "MEME",         # 4
+    "SENTIMENT_UP", # 5
+    "SENTIMENT_DN", # 6
+    "VOLATILITY",   # 7
+    "LIQUIDITY",    # 8
+    "RESONANCE_UP", # 9
+    "RESONANCE_DN", # 10
+    "RECURRENCE",   # 11
+    "FRACTAL_SELL", # 12
+    "FRACTAL_BUY",  # 13
+    "AUTO_ONLY",    # 14
+    "ANOMALY",      # 15
+]
 
 
 if __name__ == "__main__":
@@ -335,5 +403,7 @@ if __name__ == "__main__":
         "timestamp": 1757200000.0,
     })
     print(json.dumps({"gate": res["gate"], "y": res["y"],
+                      "decision": res["decision"],
+                      "top3": res["top3"],
                       "confidence": res["confidence"],
                       "storage_weights": res["storage_weights"]}, indent=2))
