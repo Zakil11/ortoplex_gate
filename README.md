@@ -102,12 +102,13 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 - Softmax dzielony przez T=1.5 — realne confidence, nie zawyżone
 - `probs` sumują się do 1.0 (zweryfikowano)
 
-### 3. ⏳ Dynamic fee wg złożoności — **DO ZROBIENIA**
+### 3. ✅ Dynamic fee wg złożoności — **GOTOWE**
 - Fee zależne od: długości tekstu, liczby features, timestamp (peak hours)
+- Implementacja w `contract.py` (odczyt dashboardu w check_tx) + testy `TestDynamicFee` (6 passed)
 
 ## 🧠 FAZA 2 — Rozbudowa modelu
 
-### 4. 🔄 Nowe modalności (28D → 42D) — **W TRAKCIE**
+### 4. ✅ Nowe modalności (28D → 42D) — **GOTOWE** (wagi: `source: kucoin_futures`, in_dim=42)
 - **Encoder cenowy** (OHLCV: open/high/low/close/volume → 7D)
 - **Encoder blockchain** (gas price, tx count, block time → 7D)
 - **Encoder sentymentu** (emoji, znaki interpunkcyjne, CAPS ratio → 7D)
@@ -134,7 +135,7 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 - Rynek: pytanie + resolution_height + pula nagród (outcome_pools)
 - Tylko twórca rynku może go rozwiązać (actual_class 0-15)
 - Nagroda = (stake × total_pool) / winning_pool — wypłacana po rozwiązaniu
-- Testy: **49 passed** (34 check_tx + 10 deliver_tx + 5 dashboard — pełny cykl end-to-end: create_market → stake → resolve → claim + model registry + dashboard)
+- Testy: **63 passed** (34 check_tx + 10 deliver_tx + 5 dashboard + 6 dynamic fee + 8 config — pełny cykl end-to-end: create_market → stake → resolve → claim + model registry + dashboard)
 - Testy deliver_tx: MockPlugin (in-memory state), weryfikacja sald, błędów (brak rynku, nie-kreator, zły outcome, podwójny claim, brak funduszy)
 
 ### 9. ⏳ Cross-chain Oracle — **DO ZROBIENIA**
@@ -148,14 +149,14 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 - Każda transakcja aktualizuje dashboard: predict, feedback, stake, create_market, resolve_market, claim_reward, register_model
 - `accuracy` recalculated = correct_feedback / total_feedback
 - Dane gotowe do wizualizacji i dynamic fee
-- Testy: **49 passed** (44 + 5 nowych dashboard)
+- Testy: **63 passed** (wszystkie moduły: marketplace + registry + dashboard + dynamic fee)
 
 ### 11. ✅ Model versioning — **GOTOWE** (commit `4e824e5`)
 - Nowy typ transakcji `MessageRegisterModel` (0x09 registry + 0x0a counter)
 - Rejestr: wersja, hash wag, accuracy, in_dim (28/42), n_classes, opis
 - Active model pointer (0x09/active/) — wskazuje najnowszą wersję
 - Governance: aktualizacja wag bez hard-forku (rejestr on-chain)
-- Testy: **49 passed** (34 + 10 + 5 dashboard)
+- Testy: **63 passed** (34 + 10 + 5 + 6 dynamic fee + 8 config)
 
 ---
 
@@ -169,7 +170,7 @@ ev5: NORMAL  score=2.69 y=0 conf=1.00 (raport powtórzony)
 | 4 | Prediction Marketplace | ✅ GOTOWE | `cdfa718` |
 | 5 | Ensemble G2 + Spiral + Resonance | ⏳ DO ZROBIENIA | — |
 | 6 | Rozszerzenie klas 16→32 | ⏳ DO ZROBIENIA | — |
-| 7 | Dynamic fee | ⏳ DO ZROBIENIA | — |
+| 7 | Dynamic fee | ✅ GOTOWE | w `contract.py` (TestDynamicFee) |
 | 8 | Dashboard on-chain | ✅ GOTOWE | `1bedab0` |
 | 9 | Model versioning | ✅ GOTOWE | `4e824e5` |
 | 10 | Cross-chain Oracle | ⏳ DO ZROBIENIA | — |
